@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL to PDF Visualizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-section h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .sql-input {
+            width: 100%;
+            height: 300px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        .sql-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(149, 165, 166, 0.4);
+        }
+
+        .preview {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .preview h3 {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .table-container {
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table-title {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            color: white;
+            padding: 15px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .table th {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .table tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .table tbody tr:hover {
+            background: #e3f2fd;
+            transition: background-color 0.2s ease;
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: white;
+        }
+
+        .type-string { background: #e74c3c; }
+        .type-number { background: #f39c12; }
+        .type-date { background: #9b59b6; }
+        .type-boolean { background: #1abc9c; }
+        .type-other { background: #95a5a6; }
+
+        .constraint-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            margin-left: 5px;
+            background: #27ae60;
+            color: white;
+        }
+
+        .error {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .success {
+            background: #efe;
+            border: 1px solid #cfc;
+            color: #363;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 12px;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .btn {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SQL to PDF Visualizer</h1>
+            <p>Transform your SQL table definitions into beautiful PDF documentation</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="input-section">
+                <h2>📝 Paste Your SQL Here</h2>
+                <textarea 
+                    id="sqlInput" 
+                    class="sql-input" 
+                    placeholder="CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE posts (
+    id INT PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    content TEXT,
+    user_id INT,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);"
+                ></textarea>
+            </div>
+            
+            <div class="controls">
+                <button class="btn btn-primary" onclick="parseSQL()">
+                    🔍 Parse SQL
+                </button>
+                <button class="btn btn-success" onclick="generatePDF()" id="pdfBtn" disabled>
+                    📄 Generate PDF
+                </button>
+                <button class="btn btn-secondary" onclick="clearAll()">
+                    🗑️ Clear All
+                </button>
+            </div>
+            
+            <div id="preview" class="preview" style="display: none;">
+                <h3>📊 Table Preview</h3>
+                <div id="tableContainer" class="table-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let parsedTables = [];
+
+        function parseSQL() {
+            const sql = document.getElementById('sqlInput').value.trim();
+            if (!sql) {
+                showError('Please enter some SQL code');
+                return;
+            }
+
+            try {
+                parsedTables = extractTables(sql);
+                if (parsedTables.length === 0) {
+                    showError('No CREATE TABLE statements found in your SQL');
+                    return;
+                }
+                
+                displayTables(parsedTables);
+                document.getElementById('pdfBtn').disabled = false;
+                showSuccess(`Successfully parsed ${parsedTables.length} table(s)`);
+            } catch (error) {
+                showError('Error parsing SQL: ' + error.message);
+            }
+        }
+
+        function extractTables(sql) {
+            const tables = [];
+            
+            // Clean up the SQL - remove comments and normalize spacing
+            let cleanSql = sql
+                .replace(/--.*$/gm, '') // Remove single line comments
+                .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
+                .replace(/\s+/g, ' ') // Normalize whitespace
+                .trim();
+            
+            // More comprehensive regex to handle various CREATE TABLE formats
+            const createTableRegex = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:`([^`]+)`|(\w+))\s*\(((?:[^()]+|\([^)]*\))*)\)\s*(?:ENGINE\s*=\s*\w+)?(?:\s*CHARSET\s*=\s*\w+)?(?:\s*COLLATE\s*=\s*\w+)?;?/gis;
+            
+            let match;
+            while ((match = createTableRegex.exec(cleanSql)) !== null) {
+                const tableName = match[1] || match[2]; // Handle both backtick and non-backtick names
+                const columnsText = match[3];
+                
+                console.log(`Found table: ${tableName}`);
+                console.log(`Columns text: ${columnsText}`);
+                
+                const columns = parseColumns(columnsText);
+                if (columns.length > 0) {
+                    tables.push({ name: tableName, columns });
+                    console.log(`Added table ${tableName} with ${columns.length} columns`);
+                }
+            }
+
+            return tables;
+        }
+
+        function parseColumns(columnsText) {
+            const columns = [];
+            
+            // Split by commas, but be careful about commas inside parentheses
+            const parts = [];
+            let current = '';
+            let parenthesesCount = 0;
+            
+            for (let i = 0; i < columnsText.length; i++) {
+                const char = columnsText[i];
+                if (char === '(') parenthesesCount++;
+                else if (char === ')') parenthesesCount--;
+                else if (char === ',' && parenthesesCount === 0) {
+                    parts.push(current.trim());
+                    current = '';
+                    continue;
+                }
+                current += char;
+            }
+            if (current.trim()) parts.push(current.trim());
+            
+            for (let part of parts) {
+                part = part.trim();
+                
+                // Skip table-level constraints
+                if (/^(PRIMARY\s+KEY|FOREIGN\s+KEY|UNIQUE|INDEX|KEY\s+|CONSTRAINT)/i.test(part)) {
+                    continue;
+                }
+                
+                // More robust column parsing
+                const columnPatterns = [
+                    // Pattern 1: `column_name` TYPE constraints
+                    /^`([^`]+)`\s+([^\s,]+(?:\([^)]+\))?)\s*(.*)?$/i,
+                    // Pattern 2: column_name TYPE constraints
+                    /^([a-zA-Z_][a-zA-Z0-9_]*)\s+([^\s,]+(?:\([^)]+\))?)\s*(.*)?$/i
+                ];
+                
+                let columnMatch = null;
+                for (const pattern of columnPatterns) {
+                    columnMatch = part.match(pattern);
+                    if (columnMatch) break;
+                }
+                
+                if (columnMatch) {
+                    const name = columnMatch[1];
+                    const type = columnMatch[2];
+                    let constraints = columnMatch[3] || '';
+                    
+                    // Clean up constraints
+                    constraints = constraints
+                        .replace(/,\s*$/, '') // Remove trailing comma
+                        .trim();
+                    
+                    columns.push({
+                        name: name,
+                        type: type,
+                        constraints: constraints
+                    });
+                    
+                    console.log(`Parsed column: ${name} (${type}) - ${constraints}`);
+                }
+            }
+            
+            return columns;
+        }
+
+        function displayTables(tables) {
+            const container = document.getElementById('tableContainer');
+            container.innerHTML = '';
+
+            tables.forEach(table => {
+                const tableDiv = document.createElement('div');
+                tableDiv.innerHTML = `
+                    <div class="table-title">${table.name}</div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Column Name</th>
+                                <th>Data Type</th>
+                                <th>Constraints</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${table.columns.map(col => `
+                                <tr>
+                                    <td><strong>${col.name}</strong></td>
+                                    <td>
+                                        <span class="type-badge ${getTypeClass(col.type)}">${col.type}</span>
+                                    </td>
+                                    <td>${formatConstraints(col.constraints)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                container.appendChild(tableDiv);
+            });
+
+            document.getElementById('preview').style.display = 'block';
+        }
+
+        function getTypeClass(type) {
+            type = type.toLowerCase();
+            if (type.includes('varchar') || type.includes('char') || type.includes('text')) return 'type-string';
+            if (type.includes('int') || type.includes('decimal') || type.includes('float') || type.includes('double')) return 'type-number';
+            if (type.includes('date') || type.includes('time') || type.includes('timestamp')) return 'type-date';
+            if (type.includes('bool')) return 'type-boolean';
+            return 'type-other';
+        }
+
+        function formatConstraints(constraints) {
+            if (!constraints) return '';
+            
+            const badges = [];
+            const constraintList = constraints.toUpperCase();
+            
+            if (constraintList.includes('PRIMARY KEY')) badges.push('<span class="constraint-badge">PRIMARY KEY</span>');
+            if (constraintList.includes('NOT NULL')) badges.push('<span class="constraint-badge">NOT NULL</span>');
+            if (constraintList.includes('UNIQUE')) badges.push('<span class="constraint-badge">UNIQUE</span>');
+            if (constraintList.includes('AUTO_INCREMENT')) badges.push('<span class="constraint-badge">AUTO_INCREMENT</span>');
+            if (constraintList.includes('DEFAULT')) badges.push('<span class="constraint-badge">DEFAULT</span>');
+            
+            return badges.join(' ');
+        }
+
+        function generatePDF() {
+            if (parsedTables.length === 0) {
+                showError('Please parse some SQL first');
+                return;
+            }
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4'); // Portrait, millimeters, A4
+                
+                const pageHeight = doc.internal.pageSize.height;
+                const pageWidth = doc.internal.pageSize.width;
+                const margin = 20;
+                const usableHeight = pageHeight - (margin * 2);
+                
+                // Title Page
+                doc.setFontSize(24);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(44, 62, 80);
+                doc.text('Database Schema Documentation', margin, 40);
+                
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(100, 100, 100);
+                doc.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, margin, 55);
+                
+                doc.setFontSize(12);
+                doc.setTextColor(80, 80, 80);
+                doc.text(`Total Tables: ${parsedTables.length}`, margin, 70);
+                
+                // Table of Contents
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(44, 62, 80);
+                doc.text('Tables Overview:', margin, 90);
+                
+                let tocY = 105;
+                parsedTables.forEach((table, index) => {
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(52, 152, 219);
+                    doc.text(`${index + 1}. ${table.name} (${table.columns.length} columns)`, margin + 10, tocY);
+                    tocY += 8;
+                });
+                
+                // Start tables on new page
+                doc.addPage();
+                let currentY = margin;
+                
+                parsedTables.forEach((table, tableIndex) => {
+                    console.log(`Processing table ${tableIndex + 1}: ${table.name} with ${table.columns.length} columns`);
+                    
+                    // Calculate space needed for this table
+                    const rowHeight = 8;
+                    const headerHeight = 12;
+                    const titleHeight = 15;
+                    const spaceNeeded = titleHeight + headerHeight + (table.columns.length * rowHeight) + 20; // 20 for spacing
+                    
+                    // Check if we need a new page
+                    if (currentY + spaceNeeded > pageHeight - margin) {
+                        doc.addPage();
+                        currentY = margin;
+                    }
+                    
+                    // Table title with background
+                    doc.setFillColor(52, 73, 94);
+                    doc.rect(margin, currentY - 5, pageWidth - (margin * 2), 12, 'F');
+                    
+                    doc.setFontSize(14);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(255, 255, 255);
+                    doc.text(`${tableIndex + 1}. ${table.name.toUpperCase()}`, margin + 5, currentY + 3);
+                    
+                    currentY += 15;
+                    
+                    // Prepare table data - ensure all columns are included
+                    const tableData = [];
+                    table.columns.forEach(col => {
+                        const constraintsText = formatConstraintsForPDF(col.constraints);
+                        tableData.push([
+                            col.name || 'N/A',
+                            col.type || 'N/A',
+                            constraintsText || '-'
+                        ]);
+                    });
+                    
+                    console.log(`Table ${table.name} data:`, tableData);
+                    
+                    // Create the table with autoTable
+                    doc.autoTable({
+                        startY: currentY,
+                        head: [['Column Name', 'Data Type', 'Constraints']],
+                        body: tableData,
+                        styles: {
+                            fontSize: 9,
+                            cellPadding: 4,
+                            lineColor: [200, 200, 200],
+                            lineWidth: 0.1,
+                        },
+                        headStyles: {
+                            fillColor: [52, 152, 219],
+                            textColor: [255, 255, 255],
+                            fontStyle: 'bold',
+                            fontSize: 10,
+                        },
+                        alternateRowStyles: {
+                            fillColor: [248, 249, 250]
+                        },
+                        columnStyles: {
+                            0: { cellWidth: 50, fontStyle: 'bold' }, // Column Name
+                            1: { cellWidth: 40 }, // Data Type
+                            2: { cellWidth: 'auto' } // Constraints
+                        },
+                        margin: { left: margin, right: margin },
+                        tableWidth: 'auto',
+                        showHead: 'everyPage',
+                        theme: 'striped'
+                    });
+                    
+                    // Update current Y position
+                    currentY = doc.lastAutoTable.finalY + 15;
+                    
+                    // Add some spacing between tables
+                    if (tableIndex < parsedTables.length - 1) {
+                        currentY += 10;
+                    }
+                });
+                
+                // Add footer to all pages
+                const totalPages = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= totalPages; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setTextColor(150, 150, 150);
+                    doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 20, pageHeight - 10);
+                    doc.text('Generated by SQL to PDF Visualizer', margin, pageHeight - 10);
+                }
+                
+                // Save the PDF
+                const fileName = `database-schema-${new Date().toISOString().split('T')[0]}.pdf`;
+                doc.save(fileName);
+                showSuccess(`PDF generated successfully! All ${parsedTables.length} tables included with ${parsedTables.reduce((sum, t) => sum + t.columns.length, 0)} total columns.`);
+                
+            } catch (error) {
+                console.error('PDF Generation Error:', error);
+                showError('Error generating PDF: ' + error.message);
+            }
+        }
+
+        function formatConstraintsForPDF(constraints) {
+            if (!constraints) return '';
+            
+            const constraintList = constraints.toUpperCase();
+            const badges = [];
+            
+            if (constraintList.includes('PRIMARY KEY')) badges.push('PRIMARY KEY');
+            if (constraintList.includes('NOT NULL')) badges.push('NOT NULL');
+            if (constraintList.includes('UNIQUE')) badges.push('UNIQUE');
+            if (constraintList.includes('AUTO_INCREMENT')) badges.push('AUTO_INCREMENT');
+            if (constraintList.includes('DEFAULT')) {
+                const defaultMatch = constraints.match(/DEFAULT\s+([^,\s]+)/i);
+                if (defaultMatch) {
+                    badges.push(`DEFAULT ${defaultMatch[1]}`);
+                } else {
+                    badges.push('DEFAULT');
+                }
+            }
+            
+            return badges.join(', ');
+        }
+
+        function clearAll() {
+            document.getElementById('sqlInput').value = '';
+            document.getElementById('preview').style.display = 'none';
+            document.getElementById('pdfBtn').disabled = true;
+            parsedTables = [];
+            clearMessages();
+        }
+
+        function showError(message) {
+            clearMessages();
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = message;
+            document.querySelector('.main-content').insertBefore(errorDiv, document.querySelector('.controls'));
+        }
+
+        function showSuccess(message) {
+            clearMessages();
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success';
+            successDiv.textContent = message;
+            document.querySelector('.main-content').insertBefore(successDiv, document.querySelector('.controls'));
+        }
+
+        function clearMessages() {
+            const messages = document.querySelectorAll('.error, .success');
+            messages.forEach(msg => msg.remove());
+        }
+
+        // Auto-resize textarea
+        document.getElementById('sqlInput').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.max(300, this.scrollHeight) + 'px';
+        });
+    </script>
+</body>
+</html>
