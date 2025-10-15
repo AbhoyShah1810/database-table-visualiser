@@ -11,7 +11,7 @@ A small client-side web app that parses SQL `CREATE TABLE` statements and genera
 
 Files
 - [index.html](index.html) — main app and UI that implements parsing, preview and PDF export.
-- [test.md](test.md) — example SQL script with sample tables and inserts.
+- [test.md](test.sql) — example SQL script with sample tables and inserts.
 - [LICENSE](LICENSE) — MIT license.
 - [.gitattributes](.gitattributes) — repository attributes.
 
