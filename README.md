@@ -17,7 +17,7 @@ Files
 
 Quick start
 1. Open [index.html](index.html) in your browser.
-2. Paste your SQL DDL into the "Paste Your SQL Here" textarea (or copy from [test.md](test.md)).
+2. Paste your SQL DDL into the "Paste Your SQL Here" textarea (or copy from [test.md](test.sql)).
 3. Click the `🔍 Parse SQL` button (calls [`parseSQL`](index.html)).
 4. Inspect the preview. When ready, click `📄 Generate PDF` (calls [`generatePDF`](index.html)) to save a PDF of the schema.
 5. Use `🗑️ Clear All` (calls [`clearAll`](index.html)) to reset.
